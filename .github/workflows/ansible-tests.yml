@@ -47,6 +47,12 @@ jobs:
         with:
             python-version: ${{env.MIN_PYTHON_VERSION}}
 
+      - name: Cache ansible-core stable-${{ matrix.ansible }} installation
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-build-ansible-${{ matrix.ansible }}-stable
+
       - name: Install ansible-core stable-${{ matrix.ansible }}
         run: pip install https://github.com/ansible/ansible/archive/stable-${{ matrix.ansible }}.tar.gz --disable-pip-version-check
 
