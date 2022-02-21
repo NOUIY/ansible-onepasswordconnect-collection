@@ -9,7 +9,7 @@ on:
 env:
   MIN_PYTHON_VERSION: "3.8"
   # arbitrarily choosing the latest stable version to run ansible-test units
-  # running ansible-test units for each ansible+python version isn't necessary
+  # running 'ansible-test units' for each ansible+python version isn't necessary
   ANSIBLE_FOR_UNIT_TESTS: "2.11"
   # defines where ansible will look for the collection
   # must be a sub-directory of ansible_collections/
@@ -47,14 +47,28 @@ jobs:
         with:
             python-version: ${{env.MIN_PYTHON_VERSION}}
 
-      - name: Cache ansible-core stable-${{ matrix.ansible }} installation
-        uses: actions/cache@v2
+      # Cache the tarballs and whl files for each ansible-core version to avoid downloading multiple times for matrix testing
+      - uses: actions/cache@v2
+        id: cache-ansible
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-build-ansible-${{ matrix.ansible }}-stable
+          path: ${{ runner.temp }}/ansible/${{ matrix.ansible }}-stable
+          key: ansible-${{ matrix.ansible }}-stable
+
+      - name: Download ansible-core stable-${{ matrix.ansible }}
+        if: steps.cache-ansible.outputs.cache-hit != 'true'
+        run: |
+          pip download \
+          https://github.com/ansible/ansible/archive/stable-${{ matrix.ansible }}.tar.gz \
+          --dest ${{ runner.temp }}/ansible/${{ matrix.ansible }}-stable \
+          --disable-pip-version-check
 
       - name: Install ansible-core stable-${{ matrix.ansible }}
-        run: pip install https://github.com/ansible/ansible/archive/stable-${{ matrix.ansible }}.tar.gz --disable-pip-version-check
+        run: |
+          pip install \
+          --no-index \
+          --find-links=. \
+          stable-${{ matrix.ansible }}.tar.gz
+        working-directory: ${{ runner.temp }}/ansible/${{ matrix.ansible }}-stable
 
       # running with docker-in-docker
       # the installed ansible-test command will know which container to use
